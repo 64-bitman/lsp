@@ -445,7 +445,10 @@ def BufferInit(lspserverId: number, bnr: number): void
     endfor
 
     if exists('#User#LspAttached')
-      doautocmd <nomodeline> User LspAttached
+      var lastb = bufnr("%")
+
+      execute ":" .. bnr .. "bufdo doautocmd <nomodeline> User LspAttached"
+      execute ":buffer " .. lastb
     endif
   endif
 enddef
