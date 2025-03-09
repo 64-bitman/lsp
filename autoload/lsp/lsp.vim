@@ -339,13 +339,12 @@ def LspSavedFile(bnr: number)
   endif
 
   for lspserver in lspservers
-    # TODO: implement `catch` block
-    # Wrap method with `try-finally` block to solve error: 
+    # Wrap method with `try-catch` block to solve error:
     # `E716: Key not present in Dictionary: "supportsDidSave"`
     try
       lspserver.didSaveFile(bnr)
-    finally
-      return
+    catch /E716:/
+      # ignore the exception
     endtry
   endfor
 enddef
@@ -833,6 +832,24 @@ export def ShowReferences(peek: bool)
   endif
 
   lspserver.showReferences(peek)
+enddef
+
+# send custom locations request
+def g:LspFindLocations(server_name: string, peek: bool, method: string, args: dict<any> = {})
+  var lspserver: dict<any> = buf.CurbufGetServerByName(server_name)
+  if lspserver->empty()
+    return
+  endif
+  if !lspserver.running
+    util.ErrMsg($'Language server "{server_name}" is not running')
+    return
+  endif
+  if !lspserver.ready
+    util.ErrMsg($'Language server "{server_name}" is not ready')
+    return
+  endif
+
+  lspserver.findLocations(peek, method, args)
 enddef
 
 # highlight all the places where a symbol is referenced
