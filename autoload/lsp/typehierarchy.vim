@@ -2,6 +2,7 @@ vim9script
 
 # Functions for dealing with type hierarchy (super types/sub types)
 
+import './options.vim' as opt
 import './util.vim'
 import './symbol.vim'
 
@@ -71,7 +72,7 @@ def UpdateTypeHierFileInPopup(lspserver: dict<any>, typeUriMap: list<dict<any>>)
     return
   endif
 
-  var popupAttrs = {
+  var popupAttrs = opt.PopupConfigure('TypeHierarchy', {
     title: $"{fname->fnamemodify(':t')} ({fname->fnamemodify(':h')})",
     wrap: false,
     fixed: true,
@@ -80,10 +81,9 @@ def UpdateTypeHierFileInPopup(lspserver: dict<any>, typeUriMap: list<dict<any>>)
     minwidth: winwidth(0) - 38,
     maxwidth: winwidth(0) - 38,
     cursorline: true,
-    border: [],
     line: 'cursor+1',
     col: 1
-  }
+  })
   lspserver.typeHierFilePopup = popup_create(bnr, popupAttrs)
   var cmds =<< trim eval END
     [{typeUriMap[n].range.start.line + 1}, 1]->cursor()
@@ -152,7 +152,7 @@ export def ShowTypeHierarchy(lspserver: dict<any>, isSuper: bool, types: dict<an
 
   # Display a popup window with the type hierarchy tree and a popup window for
   # the file.
-  var popupAttrs = {
+  var popupAttrs = opt.PopupConfigure('TypeHierarchy', {
       title: $'{isSuper ? "Super" : "Sub"}Type Hierarchy',
       wrap: 0,
       pos: 'topleft',
@@ -166,7 +166,7 @@ export def ShowTypeHierarchy(lspserver: dict<any>, isSuper: bool, types: dict<an
       fixed: true,
       filter: function(TypeHierPopupFilter, [lspserver, typeUriMap]),
       callback: function(TypeHierPopupCallback, [lspserver, typeUriMap])
-    }
+  })
   lspserver.typeHierPopup = popup_menu(typeTree, popupAttrs)
   UpdateTypeHierFileInPopup(lspserver, typeUriMap)
 enddef

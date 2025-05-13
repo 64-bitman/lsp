@@ -19,11 +19,11 @@ export def InitOnce()
     {name: 'LspSymbolRange', default: true, linksto: 'Visual'}
   ])
   prop_type_add('LspSymbolNameProp', {highlight: 'LspSymbolName',
-				       combine: false,
+				       combine: true,
 				       override: true,
 				       priority: 201})
   prop_type_add('LspSymbolRangeProp', {highlight: 'LspSymbolRange',
-				       combine: false,
+				       combine: true,
 				       override: true,
 				       priority: 200})
 enddef
@@ -154,7 +154,7 @@ enddef
 def ShowSymbolMenu(lspserver: dict<any>, query: string, cmdmods: string)
   # Create the popup menu
   var lnum = &lines - &cmdheight - 2 - 10
-  var popupAttr = {
+  var popupAttrs = opt.PopupConfigure('SymbolMenu', {
       title: 'Workspace Symbol Search',
       wrap: false,
       pos: 'topleft',
@@ -169,8 +169,8 @@ def ShowSymbolMenu(lspserver: dict<any>, query: string, cmdmods: string)
       close: 'button',
       filter: function(FilterSymbols, [lspserver]),
       callback: function('JumpToWorkspaceSymbol', [cmdmods])
-  }
-  lspserver.workspaceSymbolPopup = popup_menu([], popupAttr)
+  })
+  lspserver.workspaceSymbolPopup = popup_menu([], popupAttrs)
   lspserver.workspaceSymbolQuery = query
   prop_type_add('lspworkspacesymbol',
 			{bufnr: lspserver.workspaceSymbolPopup->winbufnr(),
@@ -293,7 +293,7 @@ def UpdatePeekFilePopup(lspserver: dict<any>, locations: list<dict<any>>)
     bnr = fname->bufadd()
   endif
 
-  var popupAttrs = {
+  var popupAttrs = opt.PopupConfigure('Peek', {
     title: $"{fname->fnamemodify(':t')} ({fname->fnamemodify(':h')})",
     wrap: false,
     fixed: true,
@@ -306,8 +306,7 @@ def UpdatePeekFilePopup(lspserver: dict<any>, locations: list<dict<any>>)
     mapping: false,
     line: 'cursor+1',
     col: 1
-  }
-
+  })
   lspserver.peekSymbolFilePopup = popup_create(bnr, popupAttrs)
   var rstart = range.start
   var cmds =<< trim eval END
@@ -387,7 +386,7 @@ def PeekLocations(lspserver: dict<any>, locations: list<dict<any>>,
     symIdx += 1
   endfor
 
-  var popupAttrs = {
+  var popupAttrs = opt.PopupConfigure('Peek', {
     title: title,
     wrap: false,
     pos: 'topleft',
@@ -401,7 +400,7 @@ def PeekLocations(lspserver: dict<any>, locations: list<dict<any>>,
     fixed: true,
     filter: function(LocPopupFilter, [lspserver, locations]),
     callback: function(LocPopupCallback, [lspserver, locations])
-  }
+  })
   lspserver.peekSymbolPopup = popup_menu(menuItems, popupAttrs)
   # Select the current symbol in the menu
   var cmds =<< trim eval END
@@ -498,7 +497,7 @@ def PeekSymbolLocation(lspserver: dict<any>, location: dict<any>)
     lspserver.peekSymbolPopup->popup_close()
   endif
   var CbFunc = function(SymbolFilterCB, [lspserver])
-  var popupAttrs = {
+  var popupAttrs = opt.PopupConfigure('Peek', {
     title: $"{fnamemodify(fname, ':t')} ({fnamemodify(fname, ':h')})",
     wrap: false,
     moved: 'any',
@@ -510,7 +509,7 @@ def PeekSymbolLocation(lspserver: dict<any>, location: dict<any>)
     border: [],
     mapping: false,
     filter: CbFunc
-  }
+  })
   lspserver.peekSymbolPopup = popup_atcursor(bnum, popupAttrs)
 
   # Highlight the symbol name and center the line in the popup
@@ -951,7 +950,7 @@ def SymbolPopupMenu(symbolTable: list<dict<any>>)
     return val.name
   })
 
-  var symInputPopupAttr = {
+  var symInputPopupAttrs = opt.PopupConfigure('SymbolMenuInput', {
     title: 'Select Symbol',
     wrap: false,
     pos: 'topleft',
@@ -964,10 +963,8 @@ def SymbolPopupMenu(symbolTable: list<dict<any>>)
     fixed: 1,
     close: 'button',
     border: []
-  }
-  var symInputPopup = popup_create('', symInputPopupAttr)
-
-  var symNamesPopupattr = {
+  })
+  var symNamesPopupAttrs = opt.PopupConfigure('SymbolMenu', {
     wrap: false,
     pos: 'topleft',
     line: &lines - 11,
@@ -979,9 +976,17 @@ def SymbolPopupMenu(symbolTable: list<dict<any>>)
     fixed: 1,
     border: [0, 0, 0, 0],
     callback: SymbolMenuItemSelected,
-    filter: SymbolMenuFilterKey,
-  }
-  var symPopupMenu = popup_menu(symNames, symNamesPopupattr)
+    filter: SymbolMenuFilterKey
+  })
+  if symNamesPopupAttrs.border->empty()
+    # The border has been added by popup configuration so we need to account for
+    # the extra width and height
+    symNamesPopupAttrs.padding = [0, 0, 0, 0]
+    symNamesPopupAttrs.line -= 2
+    symInputPopupAttrs.line -= 2
+  endif
+  var symInputPopup = popup_create('', symInputPopupAttrs)
+  var symPopupMenu = popup_menu(symNames, symNamesPopupAttrs)
 
   # Save the state in the popup menu window variables
   setwinvar(symPopupMenu, 'symbolTable', symbolTable)

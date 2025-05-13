@@ -23,9 +23,10 @@ CONTENTS                                                     *lsp-contents*
     13. Debugging ................................ |lsp-debug|
     14. Custom Command Handlers .................. |lsp-custom-commands|
     15. Custom LSP Completion Kinds .............. |lsp-custom-kinds|
-    16. Multiple Language Servers for a buffer ... |lsp-multiple-servers|
-    17. Language Servers Features ................ |lsp-features|
-    18. License .................................. |lsp-license|
+    16. Custom Popup Styles ...................... |lsp-custom-popup-styles|
+    17. Multiple Language Servers for a buffer ... |lsp-multiple-servers|
+    18. Language Servers Features ................ |lsp-features|
+    19. License .................................. |lsp-license|
 
 ==============================================================================
 1. Overview					*lsp-overview*
@@ -377,7 +378,7 @@ Additionally the following configurations can be made:
 			args: ['--stdio'],
 			processDiagHandler: (diags: list<dict<any>>) => {
 				# Only include errors and warnings
-				return diags->filter((diag, ix) => {
+				return diags->filter((ix, diag) => {
 					return diag.severity <= 2
 				})
 			},
@@ -392,7 +393,7 @@ Additionally the following configurations can be made:
 			path: '/usr/local/bin/typescript-language-server',
 			args: ['--stdio'],
 			processDiagHandler: (diags: list<dict<any>>) => {
-				return diags->map((diag, ix) => {
+				return diags->map((ix, diag) => {
 					diag.message = $'TypeScript: {diag.message}'
 					return diag
 				})
@@ -586,6 +587,80 @@ outlineOnRight		|Boolean| option.  Open the outline window on the
 outlineWinSize		|Number| option.  The size of the symbol Outline
 			window.  By default this is set to 20.
 
+						*lsp-opt-popupBorder*
+popupBorder		|Boolean| option.  Enables popup borders.
+			By default this is set to false.
+
+						*lsp-opt-popupBorderChars*
+popupBorderChars	|List| option.  The characters used to draw the popup
+			border, see |popup_create-arguments|.
+			By default this is set to
+			['─', '│', '─', '│', '╭', '╮', '╯', '╰']
+
+						*lsp-opt-popupBorderHighlight*
+popupBorderHighlight	|String| option.  The name of the highlight group used
+			for popup borders.  By default this is set to
+			'LspPopupBorder'.
+
+						*lsp-opt-popupHighlight*
+popupHighlight		|String| option.  The name of the highlight group used
+			for popup contents.  By default this is set to
+			'LspPopup'.
+
+						*lsp-opt-popup-CodeAction*
+			Override options for CodeAction popups:
+popupBorderCodeAction			|Boolean| option.
+popupBorderHighlightCodeAction		|String| option.
+popupHighlightCodeAction		|String| option.
+
+						*lsp-opt-popup-Completion*
+			Override options for Completion popups:
+popupBorderCompletion			|Boolean| option.
+popupBorderHighlightCompletion		|String| option.
+popupHighlightCompletion		|String| option.
+
+						*lsp-opt-popup-Diag*
+			Override options for Diagnostic popups:
+popupBorderDiag				|Boolean| option.
+popupBorderHighlightDiag		|String| option.
+popupHighlightDiag			|String| option.
+
+						*lsp-opt-popup-Hover*
+			Override options for Hover popups:
+popupBorderHover			|Boolean| option.
+popupBorderHighlightHover		|String| option.
+popupHighlightHover			|String| option.
+
+						*lsp-opt-popup-Peek*
+			Override options for Peek popups:
+popupBorderPeek				|Boolean| option.
+popupBorderHighlightPeek		|String| option.
+popupHighlightPeek			|String| option.
+
+						*lsp-opt-popup-SignatureHelp*
+			Override options for SignatureHelp popups:
+popupBorderSignatureHelp		|Boolean| option. Default: false
+popupBorderHighlightSignatureHelp	|String| option.
+popupHighlightSignatureHelp		|String| option.
+
+						*lsp-opt-popup-SymbolMenu*
+			Override options for SymbolMenu popups:
+popupBorderSymbolMenu			|Boolean| option.
+popupBorderHighlightSymbolMenu		|String| option.
+popupHighlightSymbolMenu		|String| option.
+
+						*lsp-opt-popup-SymbolMenuInput*
+			Override options for SymbolMenuInput popups:
+popupBorderSymbolMenuInput		|Boolean| option.
+popupBorderHighlightSymbolMenuInput	|String| option.
+popupHighlightSymbolMenuInput		|String| option.
+
+						*lsp-opt-popup-TypeHierarchy*
+			Override options for TypeHierarchy popups:
+popupBorderTypeHierarchy		|Boolean| option.
+popupBorderHighlightTypeHierarchy	|String| option.
+popupHighlightTypeHierarchy		|String| option.
+
 						*lsp-opt-semanticHighlight*
 semanticHighlight	|Boolean| option.  Enables or disables semantic
 			highlighting.
@@ -689,6 +764,15 @@ condensedCompletionMenu |Boolean| option. If enabled, minimizes completion
 			menu items to single (key-) words (plus kind).
 			Moves all additional details to info popup.
 			Caveat: LazyDoc will override moved details!
+
+					*lsp-opt-ignoreCompleteItemsIsIncomplete*
+ignoreCompleteItemsIsIncomplete |List| of strings option.
+			Optional list of LSP server names for which
+			'IsIncomplete' messages should be ignored and
+			filtering of received completion item lists
+			is enforced. This is helpful for LSP servers
+			that are misbehaving and always send this
+			kind of 'IsIncomplete' messages.
 
 For example, to disable the automatic placement of signs for the LSP
 diagnostic messages, you can add the following line to your .vimrc file: >
@@ -1697,6 +1781,10 @@ override them.
 *LspInlayHintsType*		Used to highlight inlay hints of kind "type".
 				By default, linked to the "Conceal" highlight
 				group.
+*LspPopup*			Used to highlight popup contents.  By default,
+				linked to the "Pmenu" highlight group.
+*LspPopupBorder*		Used to highlight popup borders.  By default,
+				linked to the "Pmenu" highlight group.
 *LspSigActiveParameter*		Used to highlight the active signature
 				parameter.  By default, linked to the "LineNr"
 				highlight group.
@@ -1854,7 +1942,54 @@ In the completion popup, will show something like this: >
 		| ...				 |
 <
 ==============================================================================
-16. Multiple Language Servers for a buffer	*lsp-multiple-servers*
+16. Custom Popup Styles			*lsp-custom-popup-styles*
+
+The plugin provides the possibility to style popups according to one's liking.
+By default, popups do not have borders configured, and use the |hl-Pmenu|
+highlight group.
+
+To change the global popup styles, use the generic popup |lsp-options|: >
+
+    # Enable popup borders
+    autocmd User LspSetup LspOptionsSet({popupBorder: true})
+
+    # Change popup border chars and highlights, and disable SignatureHelp border
+    var lspOpts = {
+      popupBorder: true,
+      popupBorderChars: ['-', '|', '-', '|', '┌', '┐', '┘', '└'],
+      popupBorderHighlight: 'Identifier',
+      popupHighlight: 'Normal',
+      popupBorderSignatureHelp: false
+      popupHighlightSignatureHelp: 'Pmenu'
+    }
+    autocmd User LspSetup LspOptionsSet(lspOpts)
+>
+The different popup types may all be individually customised, using the
+popup-type |lsp-options|: >
+
+    # - Hover
+    #   - border highlight: ModeMsg
+    # - Completion
+    #   - border: off
+    #   - highlight: Pmenu
+    # - Symbol menu input
+    #   - border highlight: Title
+    # - Symbol menu
+    #   - border highlight: Directory
+    var lspOpts = {
+      popupBorder: true,
+      popupBorderHighlightHover: 'ModeMsg',
+      popupBorderCompletion: false,
+      popupHighlightCompletion: 'Pmenu',
+      popupBorderHighlightSymbolMenuInput: 'Title',
+      popupBorderHighlightSymbolMenu: 'Directory'
+    }
+    autocmd User LspSetup LspOptionsSet(lspOpts)
+<
+For styling the completion menu please refer to |hl-pmenu|.
+
+==============================================================================
+17. Multiple Language Servers for a buffer	*lsp-multiple-servers*
 
 It's possible to run multiple language servers for a given buffer.
 
@@ -1945,7 +2080,7 @@ everything else: >
 	])
 <
 ==============================================================================
-17. Language Server Features			*lsp-features*
+18. Language Server Features			*lsp-features*
 
 When using multiple language servers for a given file type, by providing the
 configuration |lsp-cfg-features| it is possible to specify which language
